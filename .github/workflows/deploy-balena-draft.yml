@@ -89,6 +89,7 @@ jobs:
           balena push "${{ inputs.balena_fleet || env.BALENA_FLEET }}" \
             --source . \
             --detached \
+            --debug \
             --note "Auto-deployment from GitHub Actions
 
           📦 Services: ${{ github.event.client_payload.services || 'all' }}
@@ -102,7 +103,9 @@ jobs:
           echo "⏳ Waiting for deployment to complete..."
 
           # Wait for devices to come online with new release
-          timeout 900 bash -c '
+          # TEMP DEBUG: shortened from 900 to 30 to speed up iteration on the
+          # CompositionParseError above; restore to 900 once fixed.
+          timeout 30 bash -c '
             while true; do
               status=$(balena device list --fleet "${{ inputs.balena_fleet || env.BALENA_FLEET }}" --json | jq -r ".[].status")
               if [[ "$status" == *"online"* ]]; then
