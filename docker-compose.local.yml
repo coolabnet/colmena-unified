@@ -1,0 +1,179 @@
+services:
+  # ----------------------------------------------------------------------------
+  # DevOps Services (from colmena-devops submodule)
+  # ----------------------------------------------------------------------------
+  
+  # Postgres (Database Service)
+  postgres:
+    image: postgres:13
+    command: postgres -c 'max_connections=10000'
+    container_name: colmena_postgres
+    hostname: ${POSTGRES_HOSTNAME:-postgres}
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-colmena}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-colmena}
+    ports:
+      - "${POSTGRES_PORT:-7432}:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./docker/postgres-init:/docker-entrypoint-initdb.d
+    networks:
+      colmena_devops:
+        aliases:
+          - postgres
+    restart: unless-stopped
+    labels:
+      io.balena.features.supervisor-api: '1'
+      io.balena.features.balena-api: '1'
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-colmena} -d ${POSTGRES_DB:-colmena}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # pgAdmin (Database Management UI)
+  pgadmin:
+    container_name: colmena_pgadmin
+    image: dpage/pgadmin4:latest
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL:-admin@colmena.local}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD}
+    ports:
+      - 7050:80
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      colmena_devops:
+        aliases:
+          - pgadmin
+    restart: unless-stopped
+    labels:
+      io.balena.features.supervisor-api: '1'
+
+  # Nextcloud Service
+  nextcloud:
+    container_name: colmena_nextcloud
+    image: colmena_nextcloud
+    build:
+      context: colmena-devops/devops/apps/nextcloud/
+      dockerfile: builder/Dockerfile
+      args:
+        BUILD_CONTEXT: builder
+        NEXTCLOUD_VERSION: ${NEXTCLOUD_VERSION:-28.0.3}
+        NEXTCLOUD_API_WRAPPER_PORT: ${NEXTCLOUD_API_WRAPPER_PORT:-5001}
+        APACHE_APP_PATH: ${APACHE_APP_PATH:-/var/www/nc_api_wrapper}
+    privileged: true
+    networks:
+      - colmena_devops
+    volumes:
+      - nextcloud_data:/var/www/html
+    ports:
+      - 7103:80
+      - 7104:5001
+    environment:
+      - SQLITE_DATABASE=nextcloud
+      - NEXTCLOUD_TRUSTED_DOMAINS=${NEXTCLOUD_TRUSTED_DOMAINS:-colmena.local,localhost,*.local,192.168.*.*,10.*.*.*}
+      - NEXTCLOUD_ADMIN_USER=${NEXTCLOUD_ADMIN_USER:-admin}
+      - NEXTCLOUD_ADMIN_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD}
+    restart: unless-stopped
+    labels:
+      io.balena.features.supervisor-api: '1'
+      io.balena.features.balena-api: '1'
+      io.balena.features.dbus: '1'
+
+  # Mail Service (Mailcrab)
+  mail:
+    container_name: colmena_mail
+    image: colmena_mail
+    build:
+      context: colmena-devops/devops/apps/mailcrab
+      dockerfile: builder/Dockerfile
+      args:
+        - MAILCRAB_VERSION=latest
+    ports:
+      - 7080:1080
+      - 7025:1025
+    networks:
+      colmena_devops:
+        aliases:
+          - mail
+    restart: unless-stopped
+    labels:
+      io.balena.features.supervisor-api: '1'
+
+  # ----------------------------------------------------------------------------
+  # Colmena Unified App (Frontend + Backend in single container) - LOCAL BUILD
+  # ----------------------------------------------------------------------------
+  colmena-app:
+    image: colmena-app:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "${HTTP_PORT:-7180}:80"
+      - "${BACKEND_PORT:-7100}:8000"
+    environment:
+      - STAGE=dev
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-colmena}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-colmena}
+      - SECRET_KEY=${SECRET_KEY}
+      - DEBUG=${DEBUG:-true}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-colmena.local,localhost,*.local,*}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS:-http://localhost:8080}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+      - POSTGRES_DATABASE=${POSTGRES_DB:-colmena}
+      - POSTGRES_USERNAME=${POSTGRES_USER:-colmena}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOSTNAME=${POSTGRES_HOSTNAME:-postgres}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - EMAIL_HOST=mail
+      - EMAIL_PORT=1025
+      - EMAIL_USE_TLS=false
+      - NEXTCLOUD_URL=http://nextcloud
+      - NEXTCLOUD_API_WRAPPER_URL=http://nextcloud:5001
+      - NEXTCLOUD_USERNAME=${NEXTCLOUD_ADMIN_USER:-admin}
+      - NEXTCLOUD_PASSWORD=${NEXTCLOUD_ADMIN_PASSWORD}
+      - MEDIA_ROOT=/opt/app/media
+      - STATIC_ROOT=/opt/app/static
+      - BACKEND_HOSTNAME=colmena-app
+      - FRONTEND_HOSTNAME=colmena-app
+      - SUPERADMIN_EMAIL=${SUPERADMIN_EMAIL:-admin@colmena.local}
+      - SUPERADMIN_PASSWORD=${SUPERADMIN_PASSWORD}
+      - GUNICORN_WORKER_TIMEOUT=${GUNICORN_WORKER_TIMEOUT:-120}
+      - GUNICORN_WORKERS=${GUNICORN_WORKERS:-3}
+      - PORT=8000
+    volumes:
+      - media_data:/opt/app/media
+      - static_data:/opt/app/static
+    networks:
+      - colmena_devops
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mail:
+        condition: service_started
+      nextcloud:
+        condition: service_started
+    restart: unless-stopped
+    labels:
+      io.balena.features.supervisor-api: '1'
+      io.balena.features.balena-api: '1'
+      io.balena.features.dbus: '1'
+
+# Create internal network for all services
+networks:
+  colmena_devops:
+    driver: bridge
+
+# Define named volumes for persistent data storage
+volumes:
+  pg_data:
+  pgadmin_data:
+  nextcloud_data:
+  nextcloud_apps:
+  static_data:
+  media_data:
