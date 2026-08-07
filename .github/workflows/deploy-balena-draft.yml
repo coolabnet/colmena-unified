@@ -72,7 +72,7 @@ jobs:
           # long-form `depends_on: {service: {condition: ...}}` this repo
           # uses for real ordering guarantees on Docker Compose. Rewrite it
           # in-place in this ephemeral CI checkout only -- never committed.
-          yq -i '(.services[].depends_on | select(tag == "!!map")) |= keys' docker-compose.yml
+          yq -i '(.services[].depends_on | select(tag == "!!map")) |= keys | del(.services[] | select(.depends_on == null) | .depends_on)' docker-compose.yml
 
       - name: Deploy to Balena Draft Fleet
         id: deploy
