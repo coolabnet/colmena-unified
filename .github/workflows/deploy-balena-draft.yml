@@ -74,6 +74,12 @@ jobs:
           # in-place in this ephemeral CI checkout only -- never committed.
           yq -i '(.services[].depends_on | select(tag == "!!map")) |= keys | del(.services[] | select(.depends_on == null) | .depends_on)' docker-compose.yml
 
+          # Balena's compose parser rejects bind-mount volumes ("service.volumes
+          # cannot be of type bind") -- only named volumes are supported. This repo
+          # has exactly one, a local-dev-only Postgres init-scripts mount; drop any
+          # host-path volume entry (source starting with ./ or /).
+          yq -i 'del(.services[].volumes[] | select(test("^(\./|/)")))' docker-compose.yml
+
       - name: Deploy to Balena Draft Fleet
         id: deploy
         run: |
