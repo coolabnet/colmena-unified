@@ -42,6 +42,9 @@ jobs:
         run: |
           echo "${{ secrets.BALENA_TOKEN }}" | balena login --token
 
+      - name: DEBUG list fleets
+        run: balena fleets
+
       - name: Validate Balena configuration
         run: |
           # Check if balena.yml exists and is valid
