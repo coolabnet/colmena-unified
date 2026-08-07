@@ -80,6 +80,14 @@ jobs:
           # host-path volume entry (source starting with ./ or /).
           yq -i 'del(.services[].volumes[] | select(test("^(\./|/)")))' docker-compose.yml
 
+          # Balena's builder API rejects the whole composition with a terse
+          # "data/services should NOT have additional properties" (no further
+          # detail even with --debug) when a service name doesn't match its
+          # naming schema -- hyphens aren't allowed, only alphanumerics/
+          # underscores (service names become shell-safe env var prefixes).
+          # Rename colmena-app -> colmena_app for the push only.
+          yq -i '.services["colmena_app"] = .services["colmena-app"] | del(.services["colmena-app"])' docker-compose.yml
+
       - name: Deploy to Balena Draft Fleet
         id: deploy
         run: |
@@ -103,8 +111,8 @@ jobs:
           echo "⏳ Waiting for deployment to complete..."
 
           # Wait for devices to come online with new release
-          # TEMP DEBUG: shortened from 900 to 30 to speed up iteration on the
-          # CompositionParseError above; restore to 900 once fixed.
+          # TEMP DEBUG: still shortened to verify the colmena_app rename fix
+          # quickly; restore to 900 in the next (final) commit once confirmed.
           timeout 30 bash -c '
             while true; do
               status=$(balena device list --fleet "${{ inputs.balena_fleet || env.BALENA_FLEET }}" --json | jq -r ".[].status")

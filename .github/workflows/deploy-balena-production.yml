@@ -141,6 +141,14 @@ jobs:
           # host-path volume entry (source starting with ./ or /).
           yq -i 'del(.services[].volumes[] | select(test("^(\./|/)")))' docker-compose.yml
 
+          # Balena's builder API rejects the whole composition with a terse
+          # "data/services should NOT have additional properties" (no further
+          # detail even with --debug) when a service name doesn't match its
+          # naming schema -- hyphens aren't allowed, only alphanumerics/
+          # underscores (service names become shell-safe env var prefixes).
+          # Rename colmena-app -> colmena_app for the push only.
+          yq -i '.services["colmena_app"] = .services["colmena-app"] | del(.services["colmena-app"])' docker-compose.yml
+
           deployment_notes="${{ inputs.deployment_notes || 'Production release deployment' }}"
 
           balena push "${{ env.BALENA_PRODUCTION_FLEET }}" \
