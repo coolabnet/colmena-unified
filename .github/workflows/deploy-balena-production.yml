@@ -125,7 +125,6 @@ jobs:
 
           balena push "${{ env.BALENA_PRODUCTION_FLEET }}" \
             --source . \
-            --logs \
             --detached \
             --note "🚀 PRODUCTION DEPLOYMENT
 

@@ -79,7 +79,6 @@ jobs:
           # Deploy to Balena
           balena push "${{ inputs.balena_fleet || env.BALENA_FLEET }}" \
             --source . \
-            --logs \
             --detached \
             --note "Auto-deployment from GitHub Actions
 
