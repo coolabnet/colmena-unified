@@ -30,9 +30,12 @@ jobs:
 
       - name: Install Balena CLI
         run: |
-          curl -fsSL https://github.com/balena-io/balena-cli/releases/latest/download/balena-cli-linux-x64-standalone.zip -o balena-cli.zip
-          unzip balena-cli.zip
-          sudo mv balena-cli/* /usr/local/bin/
+          # balena-cli releases are versioned tar.gz archives (no unversioned
+          # "latest" alias asset), extracting to balena/bin/balena.
+          tag=$(curl -fsSL https://api.github.com/repos/balena-io/balena-cli/releases/latest | jq -r .tag_name)
+          curl -fsSL "https://github.com/balena-io/balena-cli/releases/download/${tag}/balena-cli-${tag}-linux-x64-standalone.tar.gz" -o balena-cli.tar.gz
+          tar -xzf balena-cli.tar.gz
+          sudo ln -sf "$PWD/balena/bin/balena" /usr/local/bin/balena
           balena version
 
       - name: Login to Balena Cloud
