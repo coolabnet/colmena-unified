@@ -156,6 +156,16 @@ jobs:
           # like an unexpected extra property.
           yq -i '.version = "2.1"' docker-compose.yml
 
+          # Balena's builder validates ports entries against a strict
+          # "ports" format (literal NUMBER:NUMBER) at push time -- it does
+          # not perform ${VAR:-default} interpolation the way a local
+          # docker-compose CLI would, so a templated port string fails
+          # schema validation ("should match format \"ports\""). Collapse
+          # ${VAR:-default} down to the literal default for the push only;
+          # actual runtime port config still comes from Balena's own
+          # per-device/fleet environment variables.
+          yq -i '(.services[] | select(.ports != null) | .ports[]) |= sub("\$\{[A-Za-z_]+:-([^}]+)\}", "${1}")' docker-compose.yml
+
           deployment_notes="${{ inputs.deployment_notes || 'Production release deployment' }}"
 
           balena push "${{ env.BALENA_PRODUCTION_FLEET }}" \
