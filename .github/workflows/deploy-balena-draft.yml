@@ -66,16 +66,13 @@ jobs:
           # placeholder just satisfies the parser, no secrets involved.
           [ -f .env ] || cp .env.example .env
 
-          # Create Balena-specific docker-compose.yml if needed
-          if [ ! -f "docker-compose.balena.yml" ]; then
-            cp docker-compose.yml docker-compose.balena.yml
-
-            # Remove development-specific services/configs
-            # Add Balena-specific labels and configurations
-            echo "Using standard docker-compose.yml for Balena deployment"
-          else
-            echo "Using existing docker-compose.balena.yml"
-          fi
+          # `balena push` reads docker-compose.yml directly from the source
+          # dir (there's no --file flag), and its compose parser only
+          # supports the short-form `depends_on: [service, ...]`, not the
+          # long-form `depends_on: {service: {condition: ...}}` this repo
+          # uses for real ordering guarantees on Docker Compose. Rewrite it
+          # in-place in this ephemeral CI checkout only -- never committed.
+          yq -i '(.services[] | select(.depends_on != null) | .depends_on) |= (if tag == "!!map" then keys else . end)' docker-compose.yml
 
       - name: Deploy to Balena Draft Fleet
         id: deploy

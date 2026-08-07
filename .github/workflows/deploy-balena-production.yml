@@ -127,6 +127,14 @@ jobs:
           # placeholder just satisfies the parser, no secrets involved.
           [ -f .env ] || cp .env.example .env
 
+          # `balena push` reads docker-compose.yml directly from the source
+          # dir and its compose parser only supports short-form
+          # `depends_on: [service, ...]`, not the long-form
+          # `depends_on: {service: {condition: ...}}` this repo uses for
+          # real Docker Compose ordering. Rewrite it in-place in this
+          # ephemeral CI checkout only -- never committed.
+          yq -i '(.services[] | select(.depends_on != null) | .depends_on) |= (if tag == "!!map" then keys else . end)' docker-compose.yml
+
           deployment_notes="${{ inputs.deployment_notes || 'Production release deployment' }}"
 
           balena push "${{ env.BALENA_PRODUCTION_FLEET }}" \
