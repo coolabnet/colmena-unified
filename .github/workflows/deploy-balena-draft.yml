@@ -114,7 +114,6 @@ jobs:
           balena push "${{ inputs.balena_fleet || env.BALENA_FLEET }}" \
             --source . \
             --detached \
-            --debug \
             --note "Auto-deployment from GitHub Actions
 
           📦 Services: ${{ github.event.client_payload.services || 'all' }}
@@ -128,9 +127,7 @@ jobs:
           echo "⏳ Waiting for deployment to complete..."
 
           # Wait for devices to come online with new release
-          # TEMP DEBUG: still shortened to verify the colmena_app rename fix
-          # quickly; restore to 900 in the next (final) commit once confirmed.
-          timeout 30 bash -c '
+          timeout 900 bash -c '
             while true; do
               status=$(balena device list --fleet "${{ inputs.balena_fleet || env.BALENA_FLEET }}" --json | jq -r ".[].status")
               if [[ "$status" == *"online"* ]]; then
