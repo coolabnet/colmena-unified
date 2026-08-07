@@ -43,7 +43,7 @@ jobs:
           echo "${{ secrets.BALENA_TOKEN }}" | balena login --token
 
       - name: DEBUG list fleets
-        run: balena fleets
+        run: balena fleet list
 
       - name: Validate Balena configuration
         run: |
@@ -96,7 +96,7 @@ jobs:
           # Wait for devices to come online with new release
           timeout 900 bash -c '
             while true; do
-              status=$(balena devices --fleet "${{ inputs.balena_fleet || env.BALENA_FLEET }}" --json | jq -r ".[].status")
+              status=$(balena device list --fleet "${{ inputs.balena_fleet || env.BALENA_FLEET }}" --json | jq -r ".[].status")
               if [[ "$status" == *"online"* ]]; then
                 echo "✅ Deployment completed successfully"
                 break
@@ -110,7 +110,7 @@ jobs:
         id: deployment_info
         run: |
           # Get release information
-          release_info=$(balena releases --fleet "${{ inputs.balena_fleet || env.BALENA_FLEET }}" --json | jq -r '.[0]')
+          release_info=$(balena release list "${{ inputs.balena_fleet || env.BALENA_FLEET }}" --json | jq -r '.[0]')
           release_id=$(echo "$release_info" | jq -r '.id')
           release_version=$(echo "$release_info" | jq -r '.commit')
 
@@ -118,7 +118,7 @@ jobs:
           echo "release_version=$release_version" >> $GITHUB_OUTPUT
 
           # Get device information
-          devices=$(balena devices --fleet "${{ inputs.balena_fleet || env.BALENA_FLEET }}" --json)
+          devices=$(balena device list --fleet "${{ inputs.balena_fleet || env.BALENA_FLEET }}" --json)
           device_count=$(echo "$devices" | jq length)
           online_devices=$(echo "$devices" | jq '[.[] | select(.status == "online")] | length')
 

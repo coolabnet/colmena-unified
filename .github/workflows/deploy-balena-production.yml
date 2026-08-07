@@ -94,7 +94,7 @@ jobs:
           fi
 
           # Check fleet exists and is accessible
-          if ! balena fleets | grep -q "${{ env.BALENA_PRODUCTION_FLEET }}"; then
+          if ! balena fleet list | grep -q "${{ env.BALENA_PRODUCTION_FLEET }}"; then
             echo "❌ Production fleet ${{ env.BALENA_PRODUCTION_FLEET }} not accessible"
             exit 1
           fi
@@ -107,7 +107,7 @@ jobs:
           echo "📋 Creating deployment backup point..."
 
           # Get current production release info
-          current_release=$(balena releases --fleet "${{ env.BALENA_PRODUCTION_FLEET }}" --json | jq -r '.[0]')
+          current_release=$(balena release list "${{ env.BALENA_PRODUCTION_FLEET }}" --json | jq -r '.[0]')
           current_id=$(echo "$current_release" | jq -r '.id')
           current_commit=$(echo "$current_release" | jq -r '.commit')
 
@@ -144,7 +144,7 @@ jobs:
           timeout 1800 bash -c '
             consecutive_online=0
             while true; do
-              devices=$(balena devices --fleet "${{ env.BALENA_PRODUCTION_FLEET }}" --json)
+              devices=$(balena device list --fleet "${{ env.BALENA_PRODUCTION_FLEET }}" --json)
               total_devices=$(echo "$devices" | jq length)
               online_devices=$(echo "$devices" | jq "[.[] | select(.status == \"online\")] | length")
 
@@ -172,7 +172,7 @@ jobs:
           echo "🔍 Running post-deployment verification..."
 
           # Get final deployment status
-          devices=$(balena devices --fleet "${{ env.BALENA_PRODUCTION_FLEET }}" --json)
+          devices=$(balena device list --fleet "${{ env.BALENA_PRODUCTION_FLEET }}" --json)
           total_devices=$(echo "$devices" | jq length)
           online_devices=$(echo "$devices" | jq "[.[] | select(.status == \"online\")] | length")
 
@@ -188,7 +188,7 @@ jobs:
         id: deployment_info
         run: |
           # Get new release information
-          release_info=$(balena releases --fleet "${{ env.BALENA_PRODUCTION_FLEET }}" --json | jq -r '.[0]')
+          release_info=$(balena release list "${{ env.BALENA_PRODUCTION_FLEET }}" --json | jq -r '.[0]')
           release_id=$(echo "$release_info" | jq -r '.id')
           release_commit=$(echo "$release_info" | jq -r '.commit')
 
@@ -196,7 +196,7 @@ jobs:
           echo "new_release_commit=$release_commit" >> $GITHUB_OUTPUT
 
           # Get device count
-          devices=$(balena devices --fleet "${{ env.BALENA_PRODUCTION_FLEET }}" --json)
+          devices=$(balena device list --fleet "${{ env.BALENA_PRODUCTION_FLEET }}" --json)
           device_count=$(echo "$devices" | jq length)
 
           echo "device_count=$device_count" >> $GITHUB_OUTPUT
