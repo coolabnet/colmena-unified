@@ -60,6 +60,12 @@ jobs:
 
       - name: Update docker-compose for Balena
         run: |
+          # docker-compose.yml's env_file: .env directive is parsed at
+          # build time even though real values come from Balena's own
+          # fleet/device environment variables at runtime -- an empty
+          # placeholder just satisfies the parser, no secrets involved.
+          [ -f .env ] || cp .env.example .env
+
           # Create Balena-specific docker-compose.yml if needed
           if [ ! -f "docker-compose.balena.yml" ]; then
             cp docker-compose.yml docker-compose.balena.yml

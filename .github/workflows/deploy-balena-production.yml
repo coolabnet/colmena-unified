@@ -121,6 +121,12 @@ jobs:
         run: |
           echo "🚀 Deploying ${{ needs.validate-deployment.outputs.release_tag }} to Production Fleet: ${{ env.BALENA_PRODUCTION_FLEET }}"
 
+          # docker-compose.yml's env_file: .env directive is parsed at
+          # build time even though real values come from Balena's own
+          # fleet/device environment variables at runtime -- an empty
+          # placeholder just satisfies the parser, no secrets involved.
+          [ -f .env ] || cp .env.example .env
+
           deployment_notes="${{ inputs.deployment_notes || 'Production release deployment' }}"
 
           balena push "${{ env.BALENA_PRODUCTION_FLEET }}" \
