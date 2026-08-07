@@ -141,13 +141,20 @@ jobs:
           # host-path volume entry (source starting with ./ or /).
           yq -i 'del(.services[].volumes[] | select(test("^(\./|/)")))' docker-compose.yml
 
-          # Balena's builder API rejects the whole composition with a terse
-          # "data/services should NOT have additional properties" (no further
-          # detail even with --debug) when a service name doesn't match its
-          # naming schema -- hyphens aren't allowed, only alphanumerics/
-          # underscores (service names become shell-safe env var prefixes).
-          # Rename colmena-app -> colmena_app for the push only.
+          # Service names as shell-safe env var prefixes: play it safe and
+          # avoid hyphens (Balena convention, though not the actual cause of
+          # the error below). Rename colmena-app -> colmena_app for the push
+          # only.
           yq -i '.services["colmena_app"] = .services["colmena-app"] | del(.services["colmena-app"])' docker-compose.yml
+
+          # The actual cause of "data/services should NOT have additional
+          # properties" (a notoriously unhelpful error -- see
+          # balena-io/balena-cli#2314): Balena's builder schema still
+          # requires the top-level `version:` key that modern Docker Compose
+          # made optional/removed. Without it, the whole document validates
+          # against the wrong schema branch and every top-level key looks
+          # like an unexpected extra property.
+          yq -i '.version = "2.1"' docker-compose.yml
 
           deployment_notes="${{ inputs.deployment_notes || 'Production release deployment' }}"
 
