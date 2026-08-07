@@ -99,9 +99,6 @@ jobs:
             exit 1
           fi
 
-          # Dry run to validate configuration
-          balena push --dry-run "${{ env.BALENA_PRODUCTION_FLEET }}"
-
           echo "✅ Pre-deployment checks passed"
 
       - name: Create deployment backup point

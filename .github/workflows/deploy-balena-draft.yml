@@ -50,8 +50,10 @@ jobs:
             exit 1
           fi
 
-          # Validate yaml syntax
-          balena push --dry-run "${{ inputs.balena_fleet || env.BALENA_FLEET }}"
+          # Current balena-cli has no `push --dry-run`; confirm the fleet is
+          # reachable/exists instead (the push step itself is the real
+          # config validation).
+          balena fleet "${{ inputs.balena_fleet || env.BALENA_FLEET }}"
 
       - name: Update docker-compose for Balena
         run: |
