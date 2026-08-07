@@ -133,7 +133,7 @@ jobs:
           # `depends_on: {service: {condition: ...}}` this repo uses for
           # real Docker Compose ordering. Rewrite it in-place in this
           # ephemeral CI checkout only -- never committed.
-          yq -i '(.services[] | select(.depends_on != null) | .depends_on) |= (if tag == "!!map" then keys else . end)' docker-compose.yml
+          yq -i '(.services[].depends_on | select(tag == "!!map")) |= keys' docker-compose.yml
 
           deployment_notes="${{ inputs.deployment_notes || 'Production release deployment' }}"
 
