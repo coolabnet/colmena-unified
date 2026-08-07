@@ -16,7 +16,10 @@ on:
         type: string
 
 env:
-  BALENA_FLEET: ${{ vars.BALENA_DRAFT_FLEET || 'colmena-os-draft' }}
+  # Real fleet confirmed live via `balena fleet list`: coolab/colmena.
+  # Set explicitly as the BALENA_DRAFT_FLEET repo variable; the
+  # 'colmena-os-draft' fallback below never matched any real fleet.
+  BALENA_FLEET: ${{ vars.BALENA_DRAFT_FLEET || 'coolab/colmena' }}
 
 jobs:
   deploy-to-draft:
@@ -41,9 +44,6 @@ jobs:
       - name: Login to Balena Cloud
         run: |
           echo "${{ secrets.BALENA_TOKEN }}" | balena login --token
-
-      - name: DEBUG list fleets
-        run: balena fleet list
 
       - name: Validate Balena configuration
         run: |
